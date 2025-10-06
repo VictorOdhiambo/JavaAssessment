@@ -10,11 +10,12 @@ spring:
         - id: customer-service
           uri: lb://customer-service
           predicates:
-            - Path=/customer/**
+            - Path=/customers/**
+
         - id: loan-service
           uri: lb://loan-service
           predicates:
-            - Path=/loan/**
+            - Path=/loans/**
 
 eureka:
   client:

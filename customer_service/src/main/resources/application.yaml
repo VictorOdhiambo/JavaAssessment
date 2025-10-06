@@ -12,6 +12,28 @@ spring:
       initial-size: 5
       max-size: 20
 
+rabbitmq:
+  host: ${SPRING_RABBITMQ_HOST:rabbitmq}
+  port: ${SPRING_RABBITMQ_PORT:5672}
+  username: ${SPRING_RABBITMQ_USERNAME:guest}
+  password: ${SPRING_RABBITMQ_PASSWORD:guest}
+  connection-timeout: 5000
+  listener:
+    simple:
+      retry:
+        enabled: true
+        initial-interval: 1000
+        max-attempts: 3
+        multiplier: 2
+        max-interval: 10000
+  queue: loan.account.queue
+  exchange: loan.exchange
+  routing-key: loan.account
+
+banking:
+  account:
+    currency: KES
+
 eureka:
   client:
     service-url:

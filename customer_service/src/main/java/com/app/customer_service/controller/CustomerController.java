@@ -8,16 +8,16 @@ import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 import java.util.Set;
 
 @RestController
-@Repository("/customers")
+@RequestMapping("/customers")
 public class CustomerController {
 
     @Autowired
@@ -33,11 +33,7 @@ public class CustomerController {
         return customerDto
                 .doOnNext(this::validate)
                 .flatMap(customerService::registerCustomer)
-                .map(saved -> ResponseEntity.status(HttpStatus.ACCEPTED).body(saved))
-                .onErrorResume(e ->
-                        Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                .body(null))
-                );
+                .map(saved -> ResponseEntity.status(HttpStatus.ACCEPTED).body(saved));
     }
 
     @PostMapping("/verify")
@@ -45,11 +41,7 @@ public class CustomerController {
         return customerDto
                 .doOnNext(this::validate)
                 .flatMap(customerService::verifyCustomer)
-                .map(ResponseEntity::ok)
-                .onErrorResume(e ->
-                                Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                        .body(null))
-                        );
+                .map(ResponseEntity::ok);
     }
     private <T> void validate(T dto){
         Set<ConstraintViolation<T>> violations = validator.validate(dto);

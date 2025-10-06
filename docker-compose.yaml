@@ -13,6 +13,25 @@ services:
     networks:
       - spring-cloud
 
+  # RabbitMQ message broker
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI port
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - spring-cloud
+
   discovery-service:
     build: ./discovery_service
     container_name: discovery-service
@@ -47,6 +66,10 @@ services:
       - DB_NAME=digital_banking_db
       - DB_USER=postgres
       - DB_PASSWORD=pass@word1
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
     networks:
       - spring-cloud
 
@@ -66,9 +89,16 @@ services:
       - DB_NAME=digital_banking_db
       - DB_USER=postgres
       - DB_PASSWORD=pass@word1
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
     networks:
       - spring-cloud
 
 networks:
   spring-cloud:
     driver: bridge
+
+volumes:
+  rabbitmq_data:

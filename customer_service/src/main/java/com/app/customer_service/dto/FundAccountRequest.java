@@ -24,4 +24,20 @@ public class FundAccountRequest {
     @DecimalMin(value = "499.0", message = "Amount must be greater than 499.0")
     @Digits(integer = 10, fraction = 2, message = "Amount format is invalid")
     private BigDecimal amount;
+
+    public @NotNull(message = "Account ID is required") @Positive(message = "Account ID must be positive") Long getAccountId() {
+        return accountId;
+    }
+
+    public void setAccountId(@NotNull(message = "Account ID is required") @Positive(message = "Account ID must be positive") Long accountId) {
+        this.accountId = accountId;
+    }
+
+    public @NotNull(message = "Amount is required") @DecimalMin(value = "499.0", message = "Amount must be greater than 499.0") @Digits(integer = 10, fraction = 2, message = "Amount format is invalid") BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(@NotNull(message = "Amount is required") @DecimalMin(value = "499.0", message = "Amount must be greater than 499.0") @Digits(integer = 10, fraction = 2, message = "Amount format is invalid") BigDecimal amount) {
+        this.amount = amount;
+    }
 }

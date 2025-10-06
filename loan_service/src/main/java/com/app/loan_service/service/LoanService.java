@@ -1,106 +1,69 @@
 package com.app.loan_service.service;
 
-import com.app.customer_service.entity.Account;
-import com.app.customer_service.repository.AccountRepository;
-import com.app.loan_service.config.CoreBankingProperties;
 import com.app.loan_service.config.LoanProperties;
 import com.app.loan_service.dto.LoanApplicationRequest;
 import com.app.loan_service.entity.Loan;
+import com.app.loan_service.messaging.LoanEventPublisher;
 import com.app.loan_service.repository.LoanRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
+import com.app.loan_service.event.LoanApprovedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class LoanService {
 
-    private final AccountRepository accountRepository;
     private final LoanRepository loanRepository;
-    private final WebClient webClient; // mock Core Banking Service client
-    private final CoreBankingProperties coreBankingProperties;
     private final LoanProperties loanProperties;
+    private final LoanEventPublisher loanEventPublisher;
 
     private static final Logger log = LoggerFactory
             .getLogger(LoanService.class);
 
-    public LoanService(AccountRepository accountRepository, LoanRepository loanRepository, WebClient webClient, CoreBankingProperties coreBankingProperties, LoanProperties loanProperties) {
-        this.accountRepository = accountRepository;
+    public LoanService(LoanRepository loanRepository, LoanProperties loanProperties, LoanEventPublisher loanEventPublisher) {
         this.loanRepository = loanRepository;
-        this.webClient = webClient;
-        this.coreBankingProperties = coreBankingProperties;
         this.loanProperties = loanProperties;
+        this.loanEventPublisher = loanEventPublisher;
     }
 
     /**
-     * Submits a loan application after performing eligibility checks.
+     * Apply for a loan asynchronously.
      */
     public Mono<Loan> applyForLoan(LoanApplicationRequest request) {
         log.info("Starting loan application for accountId={}, amount={}",
-                request.getAccountId(), request.getLoanAmount().doubleValue());
+                request.getAccountId(), request.getLoanAmount());
 
-        return accountRepository.findByAccountId(request.getAccountId())
-                .switchIfEmpty(Mono.error(new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Account not found")))
-                .flatMap(account -> validateEligibility(account, request))
-                .flatMap(valid -> sendToCoreBanking(request))
-                .flatMap(schedule -> {
-                    Loan loan = new Loan();
-                    loan.setAccountId(request.getAccountId());
-                    loan.setAmount(request.getLoanAmount().doubleValue());
-                    loan.setTenure(request.getTenureMonths());
-                    loan.setStatus("APPROVED");
-
-                    return loanRepository.save(loan);
-                });
-    }
-
-    /**
-     * Validate account eligibility before loan submission.
-     */
-    private Mono<Account> validateEligibility(Account account, LoanApplicationRequest request) {
-        if (account.getBalance().doubleValue() < loanProperties.getMinFundLimit()) {
-            return Mono.error(new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Account not funded with minimum KES " + loanProperties.getMinFundLimit()));
-        }
-
+        // Validate loan amount limits
         if (request.getLoanAmount().doubleValue() < loanProperties.getMinAmount() ||
                 request.getLoanAmount().doubleValue() > loanProperties.getMaxAmount()) {
             return Mono.error(new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    String.format("Loan amount must be between KES %.0f and %.0f",
-                            loanProperties.getMinAmount(), loanProperties.getMaxAmount())));
+                    String.format("Loan amount must be between %.0f and %.0f",
+                            loanProperties.getMinAmount(), loanProperties.getMaxAmount())
+            ));
         }
 
-        return Mono.just(account);
-    }
+        Loan loan = new Loan();
+        loan.setAccountId(request.getAccountId());
+        loan.setAmount(request.getLoanAmount().doubleValue());
+        loan.setTenure(request.getTenureMonths());
+        loan.setStatus("APPROVED");
 
-    /**
-     * Simulate Core Banking Service call for loan schedule.
-     */
-    private Mono<String> sendToCoreBanking(LoanApplicationRequest request) {
-        log.info("Sending loan request to core banking system...");
-        String endpoint = coreBankingProperties.getBaseUrl() + "/loans/schedule";
-        return webClient.post()
-                .uri(endpoint)
-                .bodyValue(request)
-                .retrieve()
-                .bodyToMono(String.class)
-                .doOnNext(resp -> log.info("Received loan schedule from core banking: {}", resp))
-                .onErrorResume(e -> {
-                    log.error("Failed to contact core banking service: {}", e.getMessage());
-                    return Mono.error(new ResponseStatusException(
-                            HttpStatus.SERVICE_UNAVAILABLE, "Core banking service unavailable"));
+        return loanRepository.save(loan)
+                .doOnSuccess(savedLoan -> {
+                    log.info("Loan approved and saved: {}", savedLoan.getId());
+                    // Publish LoanApprovedEvent to Account Service via RabbitMQ
+                    LoanApprovedEvent event = new LoanApprovedEvent();
+                    event.setLoanId(savedLoan.getId());
+                    event.setAccountId(savedLoan.getAccountId());
+                    event.setAmount(savedLoan.getAmount());
+                    loanEventPublisher.publishLoanApprovedEvent(event);
                 });
     }
 }
-

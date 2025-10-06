@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +24,6 @@ import java.time.LocalDateTime;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AccountService {
 
     private final AccountRepository accountRepository;
@@ -51,11 +49,11 @@ public class AccountService {
         log.info("Starting account funding: AccountID={}, Amount={}",
                 request.getAccountId(), request.getAmount());
 
-        return accountRepository.findById(request.getAccountId())
+        return accountRepository.findByAccountNumber(request.getAccountId())
                 .switchIfEmpty(Mono.defer(() -> {
                     log.warn("Account funding failed: Account not found - ID={}",
                             request.getAccountId());
-                    return Mono.error(new BusinessException("Account not found"));
+                    return Mono.error(new Exception("Account not found"));
                 }))
                 .flatMap(account -> validateAndFundAccount(account, request.getAmount()));
     }
@@ -64,7 +62,7 @@ public class AccountService {
      * Validate funding amount and update account balance.
      *
      * @param account the account to fund
-     * @param amount the amount to add
+     * @param amount  the amount to add
      * @return Mono of FundAccountResponse
      */
     private Mono<FundAccountResponse> validateAndFundAccount(Account account, BigDecimal amount) {
@@ -101,14 +99,16 @@ public class AccountService {
                 .doOnError(error ->
                         log.error("Error funding account: AccountID={}, Amount={}",
                                 account.getId(), amount, error))
-                .map(savedAccount -> FundAccountResponse.builder()
-                        .accountId(savedAccount.getId())
-                        .accountNumber(savedAccount.getAccountNumber())
-                        .newBalance(savedAccount.getBalance())
-                        .currency(savedAccount.getCurrency())
-                        .message(String.format("Account funded successfully with %s %s. New balance: %s %s",
-                                accountCurrency, amount, accountCurrency, savedAccount.getBalance()))
-                        .build());
+                .map(savedAccount -> {
+                    FundAccountResponse response = new FundAccountResponse();
+                    response.setAccountId(savedAccount.getId());
+                    response.setAccountNumber(savedAccount.getAccountNumber());
+                    response.setNewBalance(savedAccount.getBalance());
+                    response.setCurrency(savedAccount.getCurrency());
+                    response.setMessage(String.format("Account funded successfully with %s %s. New balance: %s %s",
+                            accountCurrency, amount, accountCurrency, savedAccount.getBalance()));
+                    return response;
+                });
     }
 
     /**
@@ -120,7 +120,7 @@ public class AccountService {
     public Mono<Account> getAccountById(Long accountId) {
         log.debug("Fetching account by ID: {}", accountId);
 
-        return accountRepository.findByAccountId(accountId)
+        return accountRepository.findByAccountNumber(accountId)
                 .switchIfEmpty(Mono.defer(() -> {
                     log.warn("Account not found: ID={}", accountId);
                     return Mono.error(new Exception("Account not found"));
@@ -152,21 +152,21 @@ public class AccountService {
     /**
      * Check if account has sufficient balance.
      *
-     * @param accountId the account ID
+     * @param accountId      the account number
      * @param requiredAmount the required amount
      * @return Mono<Boolean> true if balance is sufficient
      */
     public Mono<Boolean> hasSufficientBalance(Long accountId, BigDecimal requiredAmount) {
-        log.debug("Checking sufficient balance: AccountID={}, RequiredAmount={}",
-                accountId, requiredAmount);
+        log.debug("Checking sufficient balance: AccountID={}, RequiredAmount={}", accountId, requiredAmount);
 
-        return accountRepository.findById(accountId)
+        return accountRepository.findByAccountNumber(accountId)
                 .map(account -> {
+                    boolean sufficient = account.getBalance().compareTo(requiredAmount) >= 0;
                     log.debug("Balance check result: AccountID={}, Balance={}, Required={}, Sufficient={}",
                             accountId, account.getBalance(), requiredAmount, sufficient);
                     return sufficient;
                 })
-                .defaultIfEmpty(false);
+                .defaultIfEmpty(false); // if account not found, return false
     }
 
     /**
@@ -174,20 +174,20 @@ public class AccountService {
      * Used for loan disbursement or other deductions.
      *
      * @param accountId the account ID
-     * @param amount the amount to deduct
+     * @param amount    the amount to deduct
      * @return Mono of updated Account
      */
     @Transactional
     public Mono<Account> deductFromAccount(Long accountId, BigDecimal amount) {
         log.info("Deducting from account: AccountID={}, Amount={}", accountId, amount);
 
-        return accountRepository.findById(accountId)
+        return accountRepository.findByAccountNumber(accountId)
                 .switchIfEmpty(Mono.error(new Exception("Account not found")))
                 .flatMap(account -> {
                     if (account.getBalance().compareTo(amount) < 0) {
                         log.warn("Insufficient balance for deduction: AccountID={}, Balance={}, Requested={}",
                                 accountId, account.getBalance(), amount);
-                        return Mono.error(new BusinessException("Insufficient balance"));
+                        return Mono.error(new Exception("Insufficient balance"));
                     }
 
                     BigDecimal newBalance = account.getBalance().subtract(amount);
@@ -201,7 +201,30 @@ public class AccountService {
                 });
     }
 
+    /**
+     * Create a new account for a given customer.
+     *
+     * @param updatedCustomer the customer for whom the account is created
+     * @return Mono<Account> the saved account
+     */
     public Mono<Account> createAccount(Customer updatedCustomer) {
-        return null;
+        if (updatedCustomer == null || updatedCustomer.getId() == null) {
+            return Mono.error(new IllegalArgumentException("Customer must not be null and must have an ID"));
+        }
+
+        // Create a new account entity
+        Account account = new Account();
+        account.setCustomerId(updatedCustomer.getId());
+        account.setBalance(BigDecimal.ZERO); // default initial balance
+        account.setCurrency("KES");          // default currency
+        account.setStatus(AccountStatus.INACTIVE.getValue());
+        account.setCreatedAt(LocalDateTime.now());
+        account.setUpdatedAt(LocalDateTime.now());
+
+        return accountRepository.save(account)
+                .doOnSuccess(acc -> log.info("Created new account: {}", acc.getId()))
+                .doOnError(err -> log.error("Failed to create account for customer {}: {}",
+                        updatedCustomer.getId(), err.getMessage()));
     }
+
 }
