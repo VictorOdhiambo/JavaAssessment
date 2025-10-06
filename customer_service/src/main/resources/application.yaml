@@ -1,0 +1,18 @@
+server:
+  port: 9001
+
+spring:
+  application:
+    name: customer-service
+  r2dbc:
+    url: r2dbc:postgresql://postgres-db:5432/digital_banking_db
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:pass@word1}
+    pool:
+      initial-size: 5
+      max-size: 20
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka

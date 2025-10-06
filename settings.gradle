@@ -1,0 +1,5 @@
+rootProject.name = 'digitalbanking'
+include 'customer_service'
+include 'discovery_service'
+include 'gateway'
+include 'loan_service'
