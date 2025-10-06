@@ -39,12 +39,6 @@ public class Customer {
     @Column("dob")
     private LocalDate dob;
 
-    @Column("prequalified_amount")
-    private double prequalifiedAmount;
-
-    @Column("max_qualified_amount")
-    private double maxQualifiedAmount;
-
     @Column("created_date")
     private LocalDateTime createdDate;
 
@@ -53,4 +47,95 @@ public class Customer {
 
     @Column("verificationCode")
     private String verificationCode;
+
+    @Column("hashPassword")
+    private String hashPassword;
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getIdentityNumber() {
+        return identityNumber;
+    }
+
+    public void setIdentityNumber(String identityNumber) {
+        this.identityNumber = identityNumber;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public LocalDate getDob() {
+        return dob;
+    }
+
+    public void setDob(LocalDate dob) {
+        this.dob = dob;
+    }
+
+    public LocalDateTime getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(LocalDateTime createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
+
+    public String getVerificationCode() {
+        return verificationCode;
+    }
+
+    public void setVerificationCode(String verificationCode) {
+        this.verificationCode = verificationCode;
+    }
+
+    public String getHashPassword() {
+        return hashPassword;
+    }
+
+    public void setHashPassword(String hashPassword) {
+        this.hashPassword = hashPassword;
+    }
 }

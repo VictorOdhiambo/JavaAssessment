@@ -3,7 +3,9 @@ package com.app.customer_service.service;
 import com.app.customer_service.dto.FundAccountRequest;
 import com.app.customer_service.dto.FundAccountResponse;
 import com.app.customer_service.entity.Account;
+import com.app.customer_service.entity.Customer;
 import com.app.customer_service.repository.AccountRepository;
+import com.app.customer_service.shared.AccountStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -74,10 +76,10 @@ public class AccountService {
         }
 
         // Validate account is active
-        if (account.getStatus() != AccountStatus.ACTIVE) {
+        if (account.getStatus() != AccountStatus.ACTIVE.getValue()) {
             log.warn("Funding failed: Account is not active - AccountID={}, Status={}",
                     account.getId(), account.getStatus());
-            return Mono.error(new BusinessException(
+            return Mono.error(new Exception(
                     "Account is not active. Cannot fund inactive or frozen accounts."));
         }
 
@@ -118,10 +120,10 @@ public class AccountService {
     public Mono<Account> getAccountById(Long accountId) {
         log.debug("Fetching account by ID: {}", accountId);
 
-        return accountRepository.findById(accountId)
+        return accountRepository.findByAccountId(accountId)
                 .switchIfEmpty(Mono.defer(() -> {
                     log.warn("Account not found: ID={}", accountId);
-                    return Mono.error(new BusinessException("Account not found"));
+                    return Mono.error(new Exception("Account not found"));
                 }))
                 .doOnSuccess(account ->
                         log.debug("Account retrieved: ID={}, AccountNumber={}, Balance={}",
@@ -197,5 +199,9 @@ public class AccountService {
                                     log.info("Amount deducted successfully: AccountID={}, Amount={}, NewBalance={}",
                                             saved.getId(), amount, saved.getBalance()));
                 });
+    }
+
+    public Mono<Account> createAccount(Customer updatedCustomer) {
+        return null;
     }
 }

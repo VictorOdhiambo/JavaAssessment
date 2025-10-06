@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface AccountRepository extends R2dbcRepository<Account, UUID> {
     Mono<Account> findByCustomerId(Long customerId);
+    Mono<Account> findByAccountId(Long accountId);
 }

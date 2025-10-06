@@ -21,7 +21,7 @@ public class FundAccountRequest {
     private Long accountId;
 
     @NotNull(message = "Amount is required")
-    @DecimalMin(value = "0.01", message = "Amount must be greater than 0")
+    @DecimalMin(value = "499.0", message = "Amount must be greater than 499.0")
     @Digits(integer = 10, fraction = 2, message = "Amount format is invalid")
     private BigDecimal amount;
 }

@@ -9,6 +9,7 @@ import com.app.customer_service.shared.CustomerStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
@@ -24,6 +25,7 @@ public class CustomerService implements ICustomerService {
     private final CustomerRepository customerRepository;
     private final EmailService emailService;
     private final AccountService accountService;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     private static final Logger log = LoggerFactory
             .getLogger(CustomerService.class);
@@ -38,72 +40,65 @@ public class CustomerService implements ICustomerService {
     @Transactional
     @Override
     public Mono<Object> registerCustomer(CustomerDto customerDto) {
-        log.info("Starting customer registration for email: {}", customerDto.email());
+        log.info("Starting customer registration for email: {}", customerDto.getEmail());
 
-        return customerRepository.findCustomerByEmail(customerDto.email())
+        return customerRepository.findByEmail(customerDto.getEmail())
                 .flatMap(existingCustomer -> {
                     // Customer already exists
-                    log.warn("Customer already exists with email: {}", customerDto.email());
+                    log.warn("Customer already exists with email: {}", customerDto.getEmail());
                     return Mono.error(new IllegalArgumentException("Customer already exists"));
                 })
                 .switchIfEmpty(
                         customerRepository.save(customerMapper.toEntity(customerDto))
                                 .map(customerMapper::toDto)
                                 .doOnSuccess(saved -> {
-                                    log.info("Customer registered successfully: {}", saved.email());
-                                    emailService.sendEmailVerification(saved);
+                                    log.info("Customer registered successfully: {}", saved.getEmail());
+                                    emailService.sendEmailVerification(saved.getEmail(), generateVerificationCode());
                                 })
                 );
     }
 
     public Mono<CustomerDto> verifyCustomer(CustomerDto request) {
-        log.info("Starting customer verification for email: {}", request.email());
+        log.info("Starting customer verification for email: {}", request.getEmail());
 
-        return customerRepository.findCustomerByEmail(request.email())
+        return customerRepository.findByEmail(request.getEmail())
                 .switchIfEmpty(Mono.defer(() -> {
-                    log.error("Customer not found with email: {}", request.email());
+                    log.error("Customer not found with email: {}", request.getEmail());
                     return Mono.error(new IllegalArgumentException("Customer not found"));
                 }))
-                .map(customerMapper::toDto)
-                .flatMap(customer -> {
+                .flatMap(customerEntity -> {
                     // Validate verification code exists
-                    if (customer.verificationCode() == null) {
-                        log.error("No verification code found for customer: {}", request.email());
+                    if (customerEntity.getVerificationCode() == null) {
+                        log.error("No verification code found for customer: {}", request.getEmail());
                         return Mono.error(new IllegalArgumentException(
                                 "No verification code found. Please register again."
                         ));
                     }
 
                     // Validate verification code matches
-                    if (!customer.verificationCode().equals(request.verificationCode())) {
+                    if (!customerEntity.getVerificationCode().equals(request.getVerificationCode())) {
                         log.error("Invalid verification code for customer: {}. Expected: {}, Got: {}",
-                                request.email(), customer.verificationCode(), request.verificationCode());
+                                request.getEmail(), customerEntity.getVerificationCode(), request.getVerificationCode());
                         return Mono.error(new IllegalArgumentException("Invalid verification code"));
                     }
 
-                    Customer customerEntity = customerMapper.toEntity(customer);
+                    // Update status and clear verification code
+                    customerEntity.setStatus(CustomerStatus.ACTIVE.getValue());
+                    customerEntity.setVerificationCode(null);
 
-                    // Update customer status to ACTIVE
-                    customerEntity(CustomerStatus.ACTIVE);
-                    customer.setVerificationCode(null);
-
-                    return customerRepository.save(customerMapper.toEntity(customer))
+                    // Save the verified customer
+                    return customerRepository.save(customerEntity)
                             .doOnNext(updated -> log.info("Customer verified successfully: {}", updated.getEmail()))
                             .flatMap(updatedCustomer ->
                                     accountService.createAccount(updatedCustomer)
-                                            .doOnNext(account -> log.info("Account created automatically for customer: {} with account number: {}",
+                                            .doOnNext(account -> log.info(
+                                                    "Account created automatically for customer: {} with account number: {}",
                                                     updatedCustomer.getEmail(), account.getAccountNumber()))
-                                            .map(account -> CustomerVerificationResponse.builder()
-                                                    .customerId(updatedCustomer.getId())
-                                                    .email(updatedCustomer.getEmail())
-                                                    .status(updatedCustomer.getStatus().toString())
-                                                    .message("Email verified successfully. Account created.")
-                                                    .accountId(account.getId())
-                                                    .accountNumber(account.getAccountNumber())
-                                                    .build())
+                                            .thenReturn(customerMapper.toDto(updatedCustomer))
                             );
                 });
     }
+
 
 
     /**
@@ -131,7 +126,7 @@ public class CustomerService implements ICustomerService {
      * @return Hashed password (currently returns plain text)
      */
     private String hashPassword(String password) {
-        return password;
+        return passwordEncoder.encode(password);
     }
 
 }

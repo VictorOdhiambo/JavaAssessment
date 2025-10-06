@@ -13,6 +13,16 @@ spring:
       initial-size: 5
       max-size: 20
 
+banking:
+  loan:
+    min-fund-limit: 500
+    min-amount: 1000
+    max-amount: 10000
+
+core:
+  banking:
+    base-url: http://localhost:8081/api/v1/core
+
 eureka:
   client:
     service-url:
