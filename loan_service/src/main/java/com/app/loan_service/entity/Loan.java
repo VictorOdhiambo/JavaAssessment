@@ -5,6 +5,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
 import org.springframework.data.relational.core.mapping.Column;
 
+import java.util.UUID;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -13,10 +15,10 @@ import org.springframework.data.relational.core.mapping.Column;
 public class Loan {
 
     @Id
-    private Long id;
+    private UUID id;
 
     @Column("account_id")
-    private Long accountId;
+    private UUID accountId;
 
     @Column("amount")
     private Double amount;
@@ -33,19 +35,19 @@ public class Loan {
     @Column("updated_at")
     private String updatedAt;
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
-    public Long getAccountId() {
+    public UUID getAccountId() {
         return accountId;
     }
 
-    public void setAccountId(Long accountId) {
+    public void setAccountId(UUID accountId) {
         this.accountId = accountId;
     }
 

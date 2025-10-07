@@ -1,9 +1,9 @@
 server:
-  port: 9001
+  port: 9003
 
 spring:
   application:
-    name: customer-service
+    name: account-service
   r2dbc:
     url: r2dbc:postgresql://postgres-db:5432/digital_banking_db
     username: ${DB_USER:postgres}
@@ -26,9 +26,14 @@ rabbitmq:
         max-attempts: 3
         multiplier: 2
         max-interval: 10000
-  queue: account.queue
-  exchange: account.exchange
-  routing-key: account.key
+  loan:
+    queue: loan.account.queue
+    exchange: loan.exchange
+    routing-key: loan.account
+  account:
+    queue: account.queue
+    exchange: account.exchange
+    routing-key: account.key
 
 banking:
   account:

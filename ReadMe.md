@@ -18,14 +18,15 @@ The system follows a microservices architecture with:
 
 ## 🧱 Services Overview
 
-| Service               | Port  | Description                                       |
-|-----------------------|-------|---------------------------------------------------|
-| PostgreSQL Database   | 5442  | Central database for all services                 |
-| RabbitMQ              | 15672 | Message broker for asynchronous communication     |
-| Discovery Service     | 8761  | Eureka service registry for service discovery     |
-| API Gateway           | 8800  | Entry point that routes all external traffic      |
-| Customer Service      | 8802  | Handles customer data and verification            |
-| Loan Service          | 8803  | Processes loan applications and management        |
+| Service             | Port  | Description                                   |
+|---------------------|-------|-----------------------------------------------|
+| PostgreSQL Database | 5442  | Central database for all services             |
+| RabbitMQ            | 15672 | Message broker for asynchronous communication |
+| Discovery Service   | 8761  | Eureka service registry for service discovery |
+| API Gateway         | 8800  | Entry point that routes all external traffic  |
+| Customer Service    | 8802  | Handles customer data and verification        |
+| Loan Service        | 8803  | Processes loan applications and management    |
+| Account Service     | 8804  | Account management                            |
 
 ---
 
@@ -56,6 +57,7 @@ The system follows a microservices architecture with:
    ├── gateway/
    ├── customer_service/
    ├── loan_service/
+   ├── account_service/
    ```
 
 3. **Run Docker Compose**:
@@ -106,8 +108,8 @@ The microservices communicate using two primary methods:
 2. **Event-Driven**: Using RabbitMQ for asynchronous messaging
 
 Key message flows:
-- Loan approval events trigger notifications
-- Loan creation events update reporting data
+- Customer creation triggers account creation event
+- Loan application triggers account update
 - All services perform CRUD operations with the database
 
 ---

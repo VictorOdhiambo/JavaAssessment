@@ -1,11 +1,12 @@
-package com.app.customer_service.service;
+package com.app.account_service.service;
 
-import com.app.customer_service.dto.FundAccountRequest;
-import com.app.customer_service.dto.FundAccountResponse;
-import com.app.customer_service.entity.Account;
-import com.app.customer_service.entity.Customer;
-import com.app.customer_service.repository.AccountRepository;
-import com.app.customer_service.shared.AccountStatus;
+
+import com.app.account_service.dto.FundAccountRequest;
+import com.app.account_service.dto.FundAccountResponse;
+import com.app.account_service.entity.Account;
+import com.app.account_service.event.AccountCreationEvent;
+import com.app.account_service.repository.AccountRepository;
+import com.app.account_service.shared.AccountStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,12 +18,12 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Service class for managing account operations.
  * Handles account funding and balance management.
  */
-@Slf4j
 @Service
 public class AccountService {
 
@@ -49,7 +50,7 @@ public class AccountService {
         log.info("Starting account funding: AccountID={}, Amount={}",
                 request.getAccountId(), request.getAmount());
 
-        return accountRepository.findByAccountNumber(request.getAccountId())
+        return accountRepository.findByCustomerId(request.getAccountId())
                 .switchIfEmpty(Mono.defer(() -> {
                     log.warn("Account funding failed: Account not found - ID={}",
                             request.getAccountId());
@@ -136,7 +137,7 @@ public class AccountService {
      * @param customerId the customer ID
      * @return Mono of Account
      */
-    public Mono<Account> getAccountByCustomerId(Long customerId) {
+    public Mono<Account> getAccountByCustomerId(UUID customerId) {
         log.debug("Fetching account by customer ID: {}", customerId);
 
         return accountRepository.findByCustomerId(customerId)
@@ -200,31 +201,4 @@ public class AccountService {
                                             saved.getId(), amount, saved.getBalance()));
                 });
     }
-
-    /**
-     * Create a new account for a given customer.
-     *
-     * @param updatedCustomer the customer for whom the account is created
-     * @return Mono<Account> the saved account
-     */
-    public Mono<Account> createAccount(Customer updatedCustomer) {
-        if (updatedCustomer == null || updatedCustomer.getId() == null) {
-            return Mono.error(new IllegalArgumentException("Customer must not be null and must have an ID"));
-        }
-
-        // Create a new account entity
-        Account account = new Account();
-        account.setCustomerId(updatedCustomer.getId());
-        account.setBalance(BigDecimal.ZERO); // default initial balance
-        account.setCurrency("KES");          // default currency
-        account.setStatus(AccountStatus.INACTIVE.getValue());
-        account.setCreatedAt(LocalDateTime.now());
-        account.setUpdatedAt(LocalDateTime.now());
-
-        return accountRepository.save(account)
-                .doOnSuccess(acc -> log.info("Created new account: {}", acc.getId()))
-                .doOnError(err -> log.error("Failed to create account for customer {}: {}",
-                        updatedCustomer.getId(), err.getMessage()));
-    }
-
 }

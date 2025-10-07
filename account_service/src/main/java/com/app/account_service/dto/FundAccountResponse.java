@@ -1,4 +1,4 @@
-package com.app.customer_service.dto;
+package com.app.account_service.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

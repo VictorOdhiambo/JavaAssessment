@@ -1,7 +1,8 @@
-package com.app.customer_service.controller;
+package com.app.account_service.controller;
 
-import com.app.customer_service.dto.FundAccountRequest;
-import com.app.customer_service.service.AccountService;
+
+import com.app.account_service.dto.FundAccountRequest;
+import com.app.account_service.service.AccountService;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;

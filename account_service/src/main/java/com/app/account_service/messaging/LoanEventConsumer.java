@@ -1,7 +1,7 @@
-package com.app.customer_service.messaging;
+package com.app.account_service.messaging;
 
-import com.app.customer_service.event.LoanApprovedEvent;
-import com.app.customer_service.repository.AccountRepository;
+import com.app.account_service.event.LoanApprovedEvent;
+import com.app.account_service.repository.AccountRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,11 +23,11 @@ public class LoanEventConsumer {
         this.accountRepository = accountRepository;
     }
 
-    @RabbitListener(queues = "${rabbitmq.queue}")
+    @RabbitListener(queues = "${rabbitmq.loan.queue}")
     public void handleLoanApprovedEvent(LoanApprovedEvent event) {
         log.info("Received LoanApprovedEvent: {}", event);
 
-        accountRepository.findByAccountNumber(event.getAccountId())
+        accountRepository.findByCustomerId(event.getAccountId())
                 .flatMap(account -> {
                     account.setBalance(account.getBalance().add(BigDecimal.valueOf(event.getAmount())));
                     return accountRepository.save(account);

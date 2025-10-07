@@ -1,6 +1,5 @@
 package com.app.customer_service.entity;
 
-import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
@@ -9,13 +8,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Data
-@Builder
-@Setter
-@Getter
-@NoArgsConstructor
-@AllArgsConstructor
-@Table("Customer")
+
+@Table("customers")
 public class Customer {
     @Id
     @Column("id")
@@ -45,10 +39,10 @@ public class Customer {
     @Column("status")
     private int status;
 
-    @Column("verificationCode")
+    @Column("verification_code")
     private String verificationCode;
 
-    @Column("hashPassword")
+    @Column("hash_password")
     private String hashPassword;
 
     public UUID getId() {

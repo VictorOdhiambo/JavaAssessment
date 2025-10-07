@@ -1,4 +1,4 @@
-package com.app.customer_service.shared;
+package com.app.account_service.shared;
 
 public enum AccountStatus {
     ACTIVE(1),

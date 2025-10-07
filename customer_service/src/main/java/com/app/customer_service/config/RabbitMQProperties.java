@@ -23,4 +23,16 @@ public class RabbitMQProperties {
     public String getRoutingKey() {
         return routingKey;
     }
+
+    public void setQueue(String queue) {
+        this.queue = queue;
+    }
+
+    public void setExchange(String exchange) {
+        this.exchange = exchange;
+    }
+
+    public void setRoutingKey(String routingKey) {
+        this.routingKey = routingKey;
+    }
 }

@@ -63,7 +63,7 @@ CREATE TABLE loans (
 
     CONSTRAINT fk_loans_account
         FOREIGN KEY (account_id)
-        REFERENCES accounts (id)
+        REFERENCES customers (id)
         ON DELETE CASCADE
 );
 

@@ -17,6 +17,15 @@ spring:
           predicates:
             - Path=/loans/**
 
+        - id: account-service
+          uri: lb://account-service
+          predicates:
+            - Path=/accounts/**
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: DEBUG
+
 eureka:
   client:
     service-url:

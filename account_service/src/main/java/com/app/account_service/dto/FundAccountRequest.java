@@ -1,4 +1,4 @@
-package com.app.customer_service.dto;
+package com.app.account_service.dto;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -17,19 +18,18 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class FundAccountRequest {
     @NotNull(message = "Account ID is required")
-    @Positive(message = "Account ID must be positive")
-    private Long accountId;
+    private UUID accountId;
 
     @NotNull(message = "Amount is required")
     @DecimalMin(value = "499.0", message = "Amount must be greater than 499.0")
     @Digits(integer = 10, fraction = 2, message = "Amount format is invalid")
     private BigDecimal amount;
 
-    public @NotNull(message = "Account ID is required") @Positive(message = "Account ID must be positive") Long getAccountId() {
+    public @NotNull(message = "Account ID is required") UUID getAccountId() {
         return accountId;
     }
 
-    public void setAccountId(@NotNull(message = "Account ID is required") @Positive(message = "Account ID must be positive") Long accountId) {
+    public void setAccountId(@NotNull(message = "Account ID is required") UUID accountId) {
         this.accountId = accountId;
     }
 

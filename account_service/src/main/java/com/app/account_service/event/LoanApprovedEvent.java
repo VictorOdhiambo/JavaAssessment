@@ -1,14 +1,7 @@
-package com.app.loan_service.event;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+package com.app.account_service.event;
 
 import java.util.UUID;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class LoanApprovedEvent {
     private UUID loanId;
     private UUID accountId;
@@ -38,4 +31,5 @@ public class LoanApprovedEvent {
         this.amount = amount;
     }
 }
+
 

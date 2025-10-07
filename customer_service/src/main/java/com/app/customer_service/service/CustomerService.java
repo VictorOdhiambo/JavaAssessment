@@ -1,8 +1,9 @@
 package com.app.customer_service.service;
 
 import com.app.customer_service.dto.CustomerDto;
-import com.app.customer_service.entity.Customer;
+import com.app.customer_service.event.AccountCreationEvent;
 import com.app.customer_service.mapper.CustomerMapper;
+import com.app.customer_service.messaging.AccountCreationEventPublisher;
 import com.app.customer_service.repository.CustomerRepository;
 import com.app.customer_service.service.contract.ICustomerService;
 import com.app.customer_service.shared.CustomerStatus;
@@ -24,23 +25,25 @@ public class CustomerService implements ICustomerService {
     private final CustomerMapper customerMapper;
     private final CustomerRepository customerRepository;
     private final EmailService emailService;
-    private final AccountService accountService;
+    private final AccountCreationEventPublisher accountCreationEventPublisher;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     private static final Logger log = LoggerFactory
             .getLogger(CustomerService.class);
 
-    public CustomerService(CustomerMapper customerMapper, CustomerRepository customerRepository, EmailService emailService, AccountService accountService) {
+    public CustomerService(CustomerMapper customerMapper, CustomerRepository customerRepository, EmailService emailService, AccountCreationEventPublisher accountCreationEventPublisher) {
         this.customerMapper = customerMapper;
         this.customerRepository = customerRepository;
         this.emailService = emailService;
-        this.accountService = accountService;
+        this.accountCreationEventPublisher = accountCreationEventPublisher;
     }
 
     @Transactional
     @Override
     public Mono<Object> registerCustomer(CustomerDto customerDto) {
         log.info("Starting customer registration for email: {}", customerDto.getEmail());
+
+        customerDto.setVerificationCode(generateVerificationCode());
 
         return customerRepository.findByEmail(customerDto.getEmail())
                 .flatMap(existingCustomer -> {
@@ -53,7 +56,7 @@ public class CustomerService implements ICustomerService {
                                 .map(customerMapper::toDto)
                                 .doOnSuccess(saved -> {
                                     log.info("Customer registered successfully: {}", saved.getEmail());
-                                    emailService.sendEmailVerification(saved.getEmail(), generateVerificationCode());
+                                    emailService.sendEmailVerification(saved.getEmail(), saved.getVerificationCode());
                                 })
                 );
     }
@@ -88,14 +91,13 @@ public class CustomerService implements ICustomerService {
 
                     // Save the verified customer
                     return customerRepository.save(customerEntity)
-                            .doOnNext(updated -> log.info("Customer verified successfully: {}", updated.getEmail()))
-                            .flatMap(updatedCustomer ->
-                                    accountService.createAccount(updatedCustomer)
-                                            .doOnNext(account -> log.info(
-                                                    "Account created automatically for customer: {} with account number: {}",
-                                                    updatedCustomer.getEmail(), account.getAccountNumber()))
-                                            .thenReturn(customerMapper.toDto(updatedCustomer))
-                            );
+                    .doOnSuccess(customer -> {
+                        log.info("Customer verified successfully: {}", customer.getId());
+                        // Publish event to Account Service via RabbitMQ
+                        AccountCreationEvent event = new AccountCreationEvent();
+                        event.setCustomerId(customer.getId());
+                        accountCreationEventPublisher.publishAccountCreationEvent(event);
+                    }).thenReturn(customerMapper.toDto(customerEntity));
                 });
     }
 

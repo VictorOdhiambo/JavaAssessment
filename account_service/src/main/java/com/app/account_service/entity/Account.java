@@ -1,4 +1,4 @@
-package com.app.customer_service.entity;
+package com.app.account_service.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
